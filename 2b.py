@@ -1,5 +1,6 @@
 import numpy as np
 
+
 # Parameters
 S_0 = 100  # Stock price
 K = 100  # Strike
