@@ -11,10 +11,6 @@ sigma = 0.2  # volatility
 n = 500  # Number of binomial steps
 
 
-def nCr(n_, r_):
-    return np.math.factorial(n_) / (np.math.factorial(r_) * np.math.factorial(n_ - r_))
-
-
 def european_binomial(call):
     # Length of a period
     h = T / n

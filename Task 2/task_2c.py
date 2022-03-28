@@ -1,8 +1,8 @@
 import numpy as np
-from task_2b import nCr
+from math_functions import nCr
 
 
-def european_binomial_up_in(s_o, k, t, r, n, b, delta, sigma):
+def european_binomial_up_in(s_o, k, t, r_, n_, b, delta_, sigma_):
     # Length of a period
     h = t / n
 
