@@ -2,9 +2,9 @@ import numpy as np
 from math_functions import nCr
 
 
-def european_binomial_up_in(s_o, k, t, r_, n_, b, delta_, sigma_):
+def european_binomial_up_in(s_o, k, T, r, n, H, delta, sigma):
     # Length of a period
-    h = t / n
+    h = T / n
 
     # Up and down factor
     u = np.exp((r - delta) * h + sigma * np.sqrt(h))
@@ -16,7 +16,7 @@ def european_binomial_up_in(s_o, k, t, r_, n_, b, delta_, sigma_):
 
     # Calculating sum of end node values times probability for ending up in said node
     node_sum = 0
-    for i in range(n):
+    for i in range(n + 1):
 
         # Probability for ending up at node with i down moves
         prob = np.power(pu, n - i) * np.power(pd, i) * nCr(n, i)
@@ -27,7 +27,7 @@ def european_binomial_up_in(s_o, k, t, r_, n_, b, delta_, sigma_):
         # Intrinsic value of call at i down moves
         int_val = np.max([s_t - k, 0])
 
-        if s_t < b:
+        if s_t < H:
             # Probability of hitting the barrier before ending up at final value s_t < H
             prob_barrier = np.exp(- 2 / (np.power(sigma, 2) * T)) * np.log(s_o / H) * np.log(s_t / H)
 
@@ -38,21 +38,24 @@ def european_binomial_up_in(s_o, k, t, r_, n_, b, delta_, sigma_):
         node_sum += int_val * prob
 
     # Discount the sum
-    option_price = np.exp(- r * t) * node_sum
+    option_price = np.exp(- r * T) * node_sum
 
     return option_price
 
 
-# Parameters
-S_0 = 100  # Stock price
-K = 100  # Strike
-T = 3  # Maturity time
-r = 0.04  # Risk-free rate
-delta = 0.02  # Dividend yield
-sigma = 0.2  # volatility
-n = 500  # Number of binomial steps
-H = 150  # Barrier
+def task_2c_answers():
+    # Parameters
+    S_0 = 100  # Stock price
+    K = 100  # Strike
+    T = 3  # Maturity time
+    r = 0.04  # Risk-free rate
+    delta = 0.02  # Dividend yield
+    sigma = 0.2  # volatility
+    n = 100  # Number of binomial steps
+    H = 150  # Barrier
 
-call_option_price = european_binomial_up_in(S_0, K, T, r, n, H, delta, sigma)
+    call_option_price = european_binomial_up_in(S_0, K, T, r, n, H, delta, sigma)
 
-print(call_option_price)
+    print("Price of a european up-and-in call option with the given parameters: %f" % call_option_price)
+
+    return call_option_price
