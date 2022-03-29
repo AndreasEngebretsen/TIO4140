@@ -89,7 +89,7 @@ def task_2b_answers():
     r = 0.04  # Risk-free rate
     delta = 0.02  # Dividend yield
     sigma = 0.2  # volatility
-    n = 100  # Number of binomial steps
+    n = 3  # Number of binomial steps
 
     euro_call = european_binomial(True, S_0, K, T, r, delta, sigma, n)
     euro_put = european_binomial(False, S_0, K, T, r, delta, sigma, n)
