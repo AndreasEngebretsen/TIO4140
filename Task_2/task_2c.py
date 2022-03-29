@@ -29,7 +29,7 @@ def european_binomial_up_in(s_o, k, T, r, n, H, delta, sigma):
 
         if s_t < H:
             # Probability of hitting the barrier before ending up at final value s_t < H
-            prob_barrier = np.exp(- 2 / (np.power(sigma, 2) * T)) * np.log(s_o / H) * np.log(s_t / H)
+            prob_barrier = np.exp(- 2 / (np.power(sigma, 2) * T) * abs(np.log(s_o / H) * np.log(s_t / H)))
 
             # If s_t - K > 0, but s_t < H, we multiply with the probability of hitting the barrier
             int_val = int_val * prob_barrier
@@ -51,7 +51,7 @@ def task_2c_answers():
     r = 0.04  # Risk-free rate
     delta = 0.02  # Dividend yield
     sigma = 0.2  # volatility
-    n = 100  # Number of binomial steps
+    n = 3  # Number of binomial steps
     H = 150  # Barrier
 
     call_option_price = european_binomial_up_in(S_0, K, T, r, n, H, delta, sigma)
