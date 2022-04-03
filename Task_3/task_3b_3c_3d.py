@@ -29,7 +29,6 @@ def backward_induction_regression(stock_values, Call, K, r):
 
     cash_flow = {}
     for t in range(time_steps - 1, 1, -1):
-        print(t)
 
         if t not in cash_flow:
             # Calculate intrinsic value for each path at time t
@@ -60,7 +59,7 @@ def backward_induction_regression(stock_values, Call, K, r):
                         y[-1] = (cash_flow[i][path] * np.exp(-r * (i - (t - 1))))
 
         # Calculate regression model used for finding continuation value
-        coeffs = np.polyfit(x, y, 2)
+        coeffs = np.polyfit(x, y, 40)
 
         # Compare the intrinsic value at time t-1 to the continuation value
         cash_flow_time_t_minus_one = []
