@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def simulate_stock_price_paths(S_0, steps, h, alpha, delta, sigma, simulations):
@@ -28,6 +29,7 @@ def backward_induction_regression(stock_values, Call, K, r):
 
     cash_flow = {}
     for t in range(time_steps - 1, 1, -1):
+        print(t)
 
         if t not in cash_flow:
             # Calculate intrinsic value for each path at time t
@@ -59,7 +61,6 @@ def backward_induction_regression(stock_values, Call, K, r):
 
         # Calculate regression model used for finding continuation value
         coeffs = np.polyfit(x, y, 2)
-        coeffs = [-1.813, 2.983, -1.070]
 
         # Compare the intrinsic value at time t-1 to the continuation value
         cash_flow_time_t_minus_one = []
@@ -87,44 +88,122 @@ def backward_induction_regression(stock_values, Call, K, r):
 
 def value_option(cash_flow, r):
     option_value = 0
-    for t in range(1, len(cash_flow) + 1):
-        time_t_average = sum(cash_flow[t]) / len(cash_flow[t])
-        option_value += time_t_average * np.exp(-r * t)
+    exercise_time = np.zeros(len(cash_flow)+1)
+    for path in range(len(cash_flow[1])):
+        for t in range(1, len(cash_flow) + 1):
+            option_value += cash_flow[t][path] * np.exp(-r * t)
 
-    return option_value
+            if cash_flow[t][path] > 0:
+                exercise_time[t] += 1
+
+    option_value = option_value / len(cash_flow[1])
+
+    return option_value, exercise_time
 
 
-def american_monte_carlo(simulations, steps, S_0, T, alpha, delta, sigma, K):
+def create_histogram(option_ex_lst, name):
+    hist_data = []
+    for i in range(len(option_ex_lst)):
+        for h in range(int(option_ex_lst[i])):
+            hist_data.append(i)
+
+    plt.plot()
+    plt.hist(hist_data, bins=10)
+    plt.title(name)
+    plt.ylabel("Number of options exercised at time t")
+    plt.ylabel("t")
+    plt.show()
+
+
+def american_monte_carlo(simulations, steps, S_0, T, alpha, delta, sigma, K, Call):
     h = T / steps
 
     # Run simulations for stock paths
     all_stock_paths = simulate_stock_price_paths(S_0, steps, h, alpha, delta, sigma, simulations)
 
+    # all_stock_paths = [[1, 1.09, 1.08, 1.34],
+    #                   [1, 1.16, 1.26, 1.54],
+    #                  [1, 1.22, 1.07, 1.03],
+    #                  [1, 0.93, 0.97, 0.92],
+    #                  [1, 1.11, 1.56, 1.52],
+    #                  [1, 0.76, 0.77, 0.90],
+    #                  [1, 0.92, 0.84, 1.01],
+    #                  [1, 0.88, 1.22, 1.34]]
+
     # Calculate cash flows using LSM
     put_cash_flow = backward_induction_regression(all_stock_paths, False, K, alpha)
-    call_cash_flow = backward_induction_regression(all_stock_paths, True, K, alpha)
+    call_cash_flow = 0
+    if Call:
+        call_cash_flow = backward_induction_regression(all_stock_paths, True, K, alpha)
 
     # Calculate option value based on calculated discounting cash flow and optimal exercise time
-    put_option_value = value_option(put_cash_flow, alpha)
-    call_option_value = value_option(call_cash_flow, alpha)
+    put_option_value, put_exercise_time = value_option(put_cash_flow, alpha)
+    call_option_value = 0
+    call_exercise_time = 0
+    if Call:
+        call_option_value, call_exercise_time = value_option(call_cash_flow, alpha)
 
-    return call_option_value, put_option_value
+    return call_option_value, put_option_value, call_exercise_time, put_exercise_time
 
 
 def task_3b_answers():
     # Parameters
-    S_0 = 100  # Stock price
-    K = 100  # Strike
+    S_0 = 1  # Stock price
+    K = 1.10  # Strike
     T = 3  # Maturity time
-    r = 0.04  # Risk-free rate
+    r = 0.06  # Risk-free rate
     delta = 0.02  # Dividend yield
     sigma = 0.2  # volatility
+    simulations = 1  # Number of simulations
+    steps = 3  # number of times exercisable each year
+
+    call, put, c_ex, p_ex = american_monte_carlo(simulations, steps, S_0, T, r, delta, sigma, K, True)
+
+    print("American monte carlo call value: %f, American monte carlo put value: %f" % (call, put))
+
+
+def task_3c_answers():
+    # Parameters
+    S_0 = 1  # Stock price
+    K = 1.10  # Strike
+    T = 3  # Maturity time
+    r = 0.06  # Risk-free rate
+    delta = 0.02  # Dividend yield
+    sigma = 0.2  # Volatility
     simulations = 10000  # Number of simulations
     steps = 50  # number of times exercisable each year
 
-    call, put = american_monte_carlo(simulations, steps, S_0, T, r, delta, sigma, K)
+    call, put, c_ex, p_ex = american_monte_carlo(simulations, steps, S_0, T, r, delta, sigma, K, True)
 
-    print(call, put)
+    ex_before_mat_1 = np.sum(p_ex[:(len(p_ex)-1)]) / np.sum(p_ex)
+
+    print("-----------------------------------------------------")
+    print("Task 3 c)")
+    print("Percentage of paths where the option is exercised: %f" % ex_before_mat_1)
+
+    create_histogram(p_ex)
 
 
-task_3b_answers()
+def task_3d_answers():
+    # Parameters
+    S_0 = 1  # Stock price
+    K = 1.10  # Strike
+    T = 3  # Maturity time
+    r = 0.06  # Risk-free rate
+    delta = 0.02  # Dividend yield
+    sigma_1 = 0.1  # Volatility
+    sigma_2 = 0.4  # Volatility
+    simulations = 10000  # Number of simulations
+    steps = 50  # number of times exercisable each year
+
+    call_1, put_1, c_ex_1, p_ex_1 = american_monte_carlo(simulations, steps, S_0, T, r, delta, sigma_1, K, False)
+    call_2, put_2, c_ex_2, p_ex_2 = american_monte_carlo(simulations, steps, S_0, T, r, delta, sigma_2, K, False)
+
+    print("-----------------------------------------------------")
+    print("Task 3 d)")
+
+    create_histogram(p_ex_1, "Sigma = %f" % sigma_1)
+    create_histogram(p_ex_2, "Sigma = %f" % sigma_2)
+
+
+
