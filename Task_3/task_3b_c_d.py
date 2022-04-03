@@ -30,15 +30,16 @@ def simulate_stock_paths(S_0, steps, h, alpha, delta, sigma, simulations):
 
         # Each simulation starts with stock price equal to S_0
         path = [S_0]
-        S_h = S_0
 
         # Each simulation need to simulate all the steps
         for t in range(1, steps):
+            current_s = path[t-1]
+
             # Generate a number from the standard normal distribution
             z = np.random.normal()
 
             # Generate the new stock value
-            s_t = S_h * np.exp(((alpha - delta) - 0.5 * (sigma ** 2) * h) + sigma * np.sqrt(h) * z)
+            s_t = current_s * np.exp(((alpha - delta) - 0.5 * (sigma ** 2)) * h + sigma * np.sqrt(h) * z)
             path.append(s_t)
         all_stock_paths.append(path)
 
@@ -46,26 +47,19 @@ def simulate_stock_paths(S_0, steps, h, alpha, delta, sigma, simulations):
     return np.array(all_stock_paths)
 
 
-# Function to calculate the intrinsic values of the options in all the paths if they were exercised
+# Function to calculate the intrinsic values of the options at all time steps in all the paths if they were exercised
 def intrinsic_values(stock_paths, call, K):
     intrinsic_values_return = []
-    for row in stock_paths:
-        row_with_intrinsic_values = []
-        for stock_price in row:
+    for path in stock_paths:
+        path_with_intrinsic_values = []
+        for stock_price in path:
             if call:
-                row_with_intrinsic_values.append(max(stock_price - K, 0))
+                path_with_intrinsic_values.append(max(stock_price - K, 0))
             else:
-                row_with_intrinsic_values.append(max(K - stock_price, 0))
-        intrinsic_values_return.append(row_with_intrinsic_values)
+                path_with_intrinsic_values.append(max(K - stock_price, 0))
+        intrinsic_values_return.append(path_with_intrinsic_values)
     intrinsic_values_return = np.array(intrinsic_values_return)
     return intrinsic_values_return
-
-
-def values_at_step_n(paths, n):
-    values = []
-    for row in paths:
-        values.append(row[n])
-    return values
 
 
 def backward_induction_regression(steps, stock_paths, intrinsic_values_, r, h):
@@ -79,7 +73,6 @@ def backward_induction_regression(steps, stock_paths, intrinsic_values_, r, h):
 
     # Starting at the back, we calculate
     for n in range(steps - 1, 1, -1):
-
         cash_flow = cash_flow * np.exp(-r * h)
 
         itm = int_values[:, n - 1]
@@ -120,11 +113,12 @@ def backward_induction_regression(steps, stock_paths, intrinsic_values_, r, h):
                 itm_index_lst = np.where(itm == 1)
                 itm_index = itm_index_lst[0][k]
                 cash_flow[itm_index] = int_val
+                execution_matrix[itm_index] = np.zeros(len(execution_matrix[itm_index]))
                 execution_matrix[itm_index][n - 1] = 1
-                execution_matrix[itm_index][n] = 0
 
     cash_flow *= np.exp(-r * h)
     executed = execution_matrix.sum(axis=0)
+    sum_0 = sum(executed[:-1])
 
     return cash_flow, executed
 
@@ -143,11 +137,11 @@ def american_ls_monte_carlo(T, r, steps, K, S_0, delta, sigma, simulations, Call
         call_values = intrinsic_values(stock_paths, True, K)
 
     # Backward induction regression
-    put_cash_flow, put_execution_matrix = backward_induction_regression(steps, stock_paths, put_values, r, h)
+    put_cash_flow, put_execution = backward_induction_regression(steps, stock_paths, put_values, r, h)
     call_cash_flow = [1]
-    call_execution_matrix = 0
+    call_execution = 0
     if Call:
-        call_cash_flow, call_execution_matrix = backward_induction_regression(steps, stock_paths, call_values, r, h)
+        call_cash_flow, call_execution = backward_induction_regression(steps, stock_paths, call_values, r, h)
 
     # Divide the discounted cash flow in the number of paths to get the average
     avg_put_value = sum(put_cash_flow) / len(put_cash_flow)
@@ -155,7 +149,7 @@ def american_ls_monte_carlo(T, r, steps, K, S_0, delta, sigma, simulations, Call
     if Call:
         avg_call_value = sum(call_cash_flow) / len(call_cash_flow)
 
-    return avg_call_value, avg_put_value, call_execution_matrix, put_execution_matrix
+    return avg_call_value, avg_put_value, call_execution, put_execution
 
 
 def task_3b_answers():
@@ -177,18 +171,18 @@ def task_3b_answers():
 
 def task_3c_answers():
     # Parameters
-    S_0 = 1  # Stock price
-    K = 1.10  # Strike
+    S_0 = 100  # Stock price
+    K = 100  # Strike
     T = 3  # Maturity time
-    r = 0.06  # Risk-free rate
+    r = 0.04  # Risk-free rate
     delta = 0.02  # Dividend yield
     sigma = 0.2  # Volatility
     simulations = 10000  # Number of simulations
     steps = 50  # number of times exercisable each year
 
-    call, put, c_ex, p_ex = american_ls_monte_carlo(T, r, steps, K, S_0, delta, sigma, simulations, True)
+    call, put, c_ex, p_ex = american_ls_monte_carlo(T, r, steps, K, S_0, delta, sigma, simulations, False)
 
-    ex_before_mat_1 = np.sum(p_ex[:(len(p_ex)-1)]) / np.sum(p_ex)
+    ex_before_mat_1 = np.sum(p_ex[:(len(p_ex)-1)]) / simulations
 
     print("-----------------------------------------------------")
     print("Task 3 c)")
@@ -203,7 +197,7 @@ def task_3d_answers():
     T = 3  # Maturity time
     r = 0.04  # Risk-free rate
     delta = 0.02  # Dividend yield
-    sigma_1 = 0.05  # volatility
+    sigma_1 = 0.1  # volatility
     sigma_2 = 0.3
     simulations = 10000  # Number of simulations
     steps = 50  # number of times exercisable each year
@@ -211,5 +205,13 @@ def task_3d_answers():
     call, put, c_ex, p_ex_1 = american_ls_monte_carlo(T, r, steps, K, S_0, delta, sigma_1, simulations, False)
     call, put, c_ex, p_ex_2 = american_ls_monte_carlo(T, r, steps, K, S_0, delta, sigma_2, simulations, False)
 
+    ex_before_mat_1 = np.sum(p_ex_1[:(len(p_ex_1) - 1)]) / simulations
+    ex_before_mat_2 = np.sum(p_ex_2[:(len(p_ex_2) - 1)]) / simulations
+
     create_histogram(p_ex_1, "Sigma = %f" % sigma_1)
     create_histogram(p_ex_2, "Sigma = %f" % sigma_2)
+
+    print("-----------------------------------------------------")
+    print("Task 3 d)")
+    print("Percentage of paths where the option is exercised when sigma is %f: %f" % (sigma_1, ex_before_mat_1))
+    print("Percentage of paths where the option is exercised when sigma is %f: %f" % (sigma_2, ex_before_mat_2))
