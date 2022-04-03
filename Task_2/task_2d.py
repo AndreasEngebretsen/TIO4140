@@ -2,7 +2,7 @@ import numpy as np
 from math_functions import nCr
 
 
-def european_binomial_up_out(s_o, k, T, r, n, H, delta, sigma):
+def european_binomial_up_out(s_o, k, T, r, n, B, delta, sigma):
     # Length of a period
     h = T / n
 
@@ -27,22 +27,22 @@ def european_binomial_up_out(s_o, k, T, r, n, H, delta, sigma):
         # Intrinsic value of call at i down moves
         int_val = np.max([s_t - k, 0])
 
+        # If the ending value of the stock, s_t,
+        # is above the barrier the intrinsic value of the knock-out option is zero
+        if s_t > B:
+            int_val = 0
+
         # If the ending value of the stock, s_t, is below the barrier H
         # we have to correct for the probability of hitting it earlier
-        if s_t < H:
+        if s_t < B:
             # Probability of hitting the barrier before ending up at final value s_t < H
-            prob_barrier = np.exp(- 2 / (np.power(sigma, 2) * T) * abs(np.log(s_o / H) * np.log(s_t / H)))
+            prob_barrier = np.exp(- 2 / (np.power(sigma, 2) * T) * abs(np.log(s_o / B) * np.log(s_t / B)))
 
             # Probability of not hitting the barrier, which would mean that the option stays alive and has value
             prob_alive = 1 - prob_barrier
 
             # If s_t - K > 0, but s_t < H, we multiply with the probability of not hitting the barrier
             int_val = int_val * prob_alive
-
-        # If the ending value of the stock, s_t,
-        # is above the barrier the intrinsic value of the knock-out option is zero
-        if s_t > H:
-            int_val = 0
 
         # Summing up after multiplying probability and intrinsic value
         node_sum += int_val * prob
